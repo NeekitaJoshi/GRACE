@@ -1,0 +1,200 @@
+clear
+clc
+%Create georeference object for the grid
+R = georasterref;
+R.RasterSize = [150,360];
+R.Latlim = [-60, 90];
+R.Lonlim = [-180,180];
+R.ColumnsStartFrom = 'north';
+R.RowsStartFrom = 'west';
+CSR_M1 = NaN(150,360,432);
+JPL_M1 = NaN(150,360,432);
+CSR_SH1 = NaN(150,360,432);
+JPL_SH1 = NaN(150,360,432);
+CSR_M = dir('S_1.nc');
+JPL_M = dir('S_2.nc');
+CSR_SH =dir('S_3.nc');
+JPL_SH =dir('S_4.nc');
+finfo = ncinfo(CSR_M.name); 
+    ncid = netcdf.open(CSR_M.name); %open the netCDF file 
+    lon = netcdf.getVar(ncid,1); %extract latitude variable
+    lat = netcdf.getVar(ncid,2); %extract longitude variable
+    time = netcdf.getVar(ncid,3); %extract time
+    start = [0 0 0]; count = [360 150 length(time)]; 
+    CSR_M = netcdf.getVar(ncid,4,start,count);
+    finfo1 = ncinfo(JPL_M.name); 
+    ncid1 = netcdf.open(JPL_M.name); %open the netCDF file 
+    lon1 = netcdf.getVar(ncid1,1); %extract latitude variable
+    lat1 = netcdf.getVar(ncid1,2); %extract longitude variable
+    time1 = netcdf.getVar(ncid1,3); %extract time
+    start1 = [0 0 0]; count1 = [360 150 length(time1)]; 
+    JPL_M = netcdf.getVar(ncid1,4,start1,count1);%extract PET variable
+    finfo2 = ncinfo(CSR_SH.name); 
+    ncid2 = netcdf.open(CSR_SH.name); %open the netCDF file 
+    lon2 = netcdf.getVar(ncid2,1); %extract latitude variable
+    lat2 = netcdf.getVar(ncid2,2); %extract longitude variable
+    time2 = netcdf.getVar(ncid2,3); %extract time
+    start2 = [0 0 0]; count2 = [360 150 length(time1)]; 
+    CSR_SH = netcdf.getVar(ncid2,4,start2,count2);%extract PET variable
+    finfo3 = ncinfo(JPL_SH.name); 
+    ncid3 = netcdf.open(JPL_SH.name); %open the netCDF file 
+    lon3 = netcdf.getVar(ncid3,1); %extract latitude variable
+    lat3 = netcdf.getVar(ncid3,2); %extract longitude variable
+    time3 = netcdf.getVar(ncid3,3); %extract time
+    start3 = [0 0 0]; count3 = [360 150 length(time1)]; 
+    JPL_SH = netcdf.getVar(ncid3,4,start3,count3);%extract PET variable
+count =1;
+    for i = 1:length(time)
+        sub(1:360,1:150) = CSR_M(:,:,i);
+        sub1(1:360,1:150) = JPL_M(:,:,i); 
+        sub2(1:360,1:150) = CSR_SH(:,:,i);
+        sub3(1:360,1:150) = JPL_SH(:,:,i);
+        for ii = 1:150
+            sub(sub(:,ii) <= -3e+10, ii) = NaN;
+            sub1(sub1(:,ii) <= -3e+10, ii) = NaN;
+            sub2(sub2(:,ii) <= -3e+10, ii) = NaN;
+            sub3(sub3(:,ii) <= -3e+10, ii) = NaN;
+%             sub1(sub1(:,ii) > 1000, ii) = NaN;%Make missing values NaN
+
+        end
+        CSR_M1(:,:,count) = sub';
+        JPL_M1(:,:,count) = sub1'; 
+        CSR_SH1(:,:,count) = sub2'; 
+        JPL_SH1(:,:,count) = sub3'; 
+%flip the data so dimensions are lat x lon x time
+        count = count + 1; 
+        clear sub sub1 sub2 sub3
+    end
+save S_1.mat CSR_M1;
+save S_2.mat JPL_M1;
+save S_3.mat CSR_SH1;
+save S_4.mat JPL_SH1;
+
+%%
+%Create georeference object for the grid
+R = georasterref;
+R.RasterSize = [150,360];
+R.Latlim = [-60, 90];
+R.Lonlim = [-180,180];
+R.ColumnsStartFrom = 'north';
+R.RowsStartFrom = 'west';
+CSR_M = load('S_1.mat');
+CSR_M = CSR_M.CSR_M1;
+JPL_M = load('S_2.mat');
+JPL_M = JPL_M.JPL_M1;
+CSR_SH = load('S_3.mat');
+CSR_SH = CSR_SH.CSR_SH1;
+JPL_SH = load('S_4.mat');
+JPL_SH = JPL_SH.JPL_SH1;
+
+wsDatar = [];
+wsP = [];
+wsD = []; wsDe = []; ws= [];
+petCount = 1;
+uncer = [];
+uncer1 = [];
+uncer2 = [];
+uncer3 = [];
+    
+    latlon = xlsread('cords_World.csv');
+    counter = 1;
+    for j = 1:length(latlon)
+        j;
+        tic
+         t = 1:432;  
+    %Find the grid cell (row, col) of my stations  
+%     for i = 1979:2016
+%         for jk= 1:12 
+       
+%         k = i;
+%          w = 1:12;
+%           wsDatar(2+counter,1)= k;  
+       
+            
+             lat = latlon(j,end-1);
+              lon = latlon(j,end);
+%               lon = lon+360;
+%      lat = 33.5;
+%     lon = 7.5;
+%           wsDatar(2+counter,2)= jk;
+              wsDatar(1,j+2) = lat(1,1);
+                wsDatar(2,j+2) = lon(1,1);
+%             ws(2+counter,1)= k;
+%           ws(2+counter,2)= j;
+              ws(1,j+2) = lat(1,1);
+                ws(2,j+2) = lon(1,1);
+%                 wsD(2+counter,2)= jk;
+                wsD(1,j+2) = lat(1,1);
+                wsD(2,j+2) = lon(1,1);
+%                 wsDe(2+counter,2)= jk;
+                wsDe(1,j+2) = lat(1,1);
+                wsDe(2,j+2) = lon(1,1);
+          for jj = 1:length(time)
+                y = t(1,jj);
+                [row,col] = latlon2pix(R,lat,lon); 
+                row = round(row); col = round(col); 
+%                 row = 44; col = 115;
+%                 row = 44; col = 116;
+                wsDatar(jj+2,2+j) = CSR_M(row,col,jj);
+                 wsD(jj+2,2+j) = JPL_M(row,col,jj);
+                  wsDe(jj+2,2+j) = CSR_SH(row,col,jj);
+                   ws(jj+2,2+j) = JPL_SH(row,col,jj);
+          end
+         wsP(:,1) = wsDatar(3:end,2+counter);
+         wsP(:,2) = wsD(3:end,2+counter);
+         wsP(:,3) = wsDe(3:end,2+counter);
+         wsP(:,4) = ws(3:end,2+counter);
+           counter = counter+1;    
+
+save series.mat wsP
+  clear jj 
+  toc
+  
+%%
+           
+%         PET(:,:,petCount) = sub'; 
+%         petCount = petCount + 1;    
+ addpath('./Functions')
+series = load ('series.mat');
+series = series.wsP;
+TF = isnan(series);
+
+
+if TF ~= 1
+% csr-mascon-IB; jpl-msc-IB; csr-sh-IB; jpl-sh-IB, respectively
+
+[~,R1] = TCH(series(:,2),series(:,3),series(:,4),series(:,1));
+
+if all(diag(eig((R1+R1')/2))) >= 0
+    TCH1 =  R1(4,4).^0.5; % csr-mascon-IB
+    TCH2 = R1(1,1).^0.5; % jpl-msc-IB
+    TCH3 = R1(2,2).^0.5; % csr-sh-IB
+    TCH4 = R1(3,3).^0.5; % jpl-sh-IB
+    
+fprintf('CSR-M = %8.2f JPL-M = %8.2f CSR-SH = %8.2f JPL-SH = %8.2f\n',[TCH1 TCH2 TCH3 TCH4]);
+else
+    TCH1 = NaN;
+    TCH2 = NaN;
+    TCH3 = NaN;
+    TCH4 = NaN;
+end
+else
+    TCH1 = NaN;
+    TCH2 = NaN;
+    TCH3 = NaN;
+    TCH4 = NaN;
+end
+% cs= []; jp = []; cssh=[];jpsh=[];
+% [row,col] = latlon2pix(R,lat,lon); 
+%  row = 24; col = 8; 
+ uncer(row,col) = TCH1;
+ uncer1(row,col) = TCH2;
+ uncer2(row,col) = TCH3;
+ uncer3(row,col) = TCH4;
+clear TCH1 TCH2 TCH3 TCH4 TF wsP R1 series
+    end       
+a= ['CSR-M.tif'];b= ['JPL-M.tif'];c= ['CSR-SH.tif'];d= ['JPL-SH.tif'];
+geotiffwrite(a,uncer,R);
+geotiffwrite(b,uncer1,R);
+geotiffwrite(c,uncer2,R);
+geotiffwrite(d,uncer3,R);
